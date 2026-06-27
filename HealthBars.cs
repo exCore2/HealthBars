@@ -376,6 +376,11 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
         Graphics.DrawImage(HealthbarTexture, barArea, bar.Settings.BackgroundColor.MultiplyAlpha(alphaMulti));
         var barSources = new List<(float Current, float Max, Color Color)>();
+        if (bar.Settings.ShowWard)
+        {
+            barSources.Add((bar.Life.Ward.Current, bar.Life.Ward.Current, bar.Settings.WardColor));
+        }
+
         barSources.Add((bar.Life.CurHP, bar.Life.MaxHP, bar.Color));
         if (bar.Settings.CombineLifeAndEs)
         {

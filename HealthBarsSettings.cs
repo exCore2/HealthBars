@@ -132,6 +132,7 @@ public class UnitSettings
     public RangeNode<int> HealthSegments { get; set; } = new(1, 1, 10);
     public RangeNode<float> HealthSegmentHeight { get; set; } = new(0.5f, 0, 1);
     public ColorNode LifeColor { get; set; } = Color.White;
+    public ColorNode WardColor { get; set; } = Color.BlueViolet;
     public ColorNode EsColor { get; set; } = Color.Aqua;
     public ColorNode ManaColor { get; set; } = Color.Blue;
     public ColorNode CullableColor { get; set; } = Color.White;
@@ -148,6 +149,7 @@ public class UnitSettings
     [Menu(null, "Combines Life and Mana into a single bar that's filled proportionally to the total EHP")]
     public ToggleNode CombineLifeAndMana { get; set; } = new(false);
     public ToggleNode ManaProtectsLife { get; set; } = new(false);
+    public ToggleNode ShowWard { get; set; } = new(true);
 
     [ConditionalDisplay(nameof(CombineLifeAndEs), false)]
     public RangeNode<float> EsBarHeight { get; set; } = new(1 / 3f, 0, 1);
