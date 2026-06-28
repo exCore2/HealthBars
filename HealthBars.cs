@@ -378,11 +378,15 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         var barSources = new List<(float Current, float Max, Color Color)>();
         if (bar.Settings.ShowWard)
         {
-            barSources.Add((bar.Life.Ward.Current, bar.Life.Ward.Current, bar.Settings.WardColor));
+            barSources.Add((bar.Life.Ward.Current, bar.Life.Ward.Max, bar.Settings.WardColor));
         }
 
-        barSources.Add((bar.Life.CurHP, bar.Life.MaxHP, bar.Color));
-        if (bar.Settings.CombineLifeAndEs)
+        if (bar.Settings.ShowLife)
+        {
+            barSources.Add((bar.Life.CurHP, bar.Life.MaxHP, bar.Color));
+        }
+
+        if (bar.Settings.ShowES && bar.Settings.CombineLifeAndEs)
         {
             barSources.Add((bar.Life.CurES, bar.Life.MaxES, bar.Settings.EsColor));
         }
@@ -404,7 +408,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             }
         }
 
-        if (!bar.Settings.CombineLifeAndEs)
+        if (bar.Settings.ShowES && !bar.Settings.CombineLifeAndEs)
         {
             var esWidth = barArea.Width * bar.EsPercent;
             Graphics.DrawImage(HealthbarTexture, new RectangleF(barArea.X, barArea.Y, esWidth, barArea.Height * bar.Settings.EsBarHeight),
@@ -509,6 +513,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             .Replace("{currentes}", bar.Life.CurES.FormatHp())
             .Replace("{currentlife}", bar.Life.CurHP.FormatHp())
             .Replace("{currentmana}", bar.Life.CurMana.FormatHp())
+            .Replace("{currentward}", bar.Life.Ward.Current.FormatHp())
             ;
     }
 

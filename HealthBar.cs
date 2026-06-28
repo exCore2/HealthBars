@@ -68,8 +68,12 @@ public class HealthBar
     public float EsPercent => Life.ESPercentage;
     public float ManaPercent => Life.MPPercentage;
     public float EhpPercent => CurrentEhp / (float)MaxEhp;
-    public int CurrentEhp => Life.CurHP + Life.CurES + (Settings.ManaProtectsLife ? Life.CurMana : 0);
-    public int MaxEhp => Life.MaxHP + Life.MaxES + (Settings.ManaProtectsLife ? Life.MaxMana : 0);
+
+    public int CurrentEhp => (Settings.ShowLife ? Life.CurHP : 0) + (Settings.ShowES ? Life.CurES : 0) + (Settings.ManaProtectsLife ? Life.CurMana : 0) +
+                             (Settings.ShowWard ? Life.Ward.Current : 0);
+
+    public int MaxEhp => (Settings.ShowLife ? Life.MaxHP : 0) + (Settings.ShowES ? Life.MaxES : 0) + (Settings.ManaProtectsLife ? Life.MaxMana : 0) +
+                         (Settings.ShowWard ? Life.Ward.Max : 0);
     public readonly Queue<(DateTime Time, int Value)> EhpHistory = new Queue<(DateTime, int)>();
 
     public Color Color

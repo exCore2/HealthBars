@@ -149,6 +149,8 @@ public class UnitSettings
     [Menu(null, "Combines Life and Mana into a single bar that's filled proportionally to the total EHP")]
     public ToggleNode CombineLifeAndMana { get; set; } = new(false);
     public ToggleNode ManaProtectsLife { get; set; } = new(false);
+    public ToggleNode ShowLife { get; set; } = new(true);
+    public ToggleNode ShowES { get; set; } = new(true);
     public ToggleNode ShowWard { get; set; } = new(true);
 
     [ConditionalDisplay(nameof(CombineLifeAndEs), false)]
