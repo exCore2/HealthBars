@@ -33,6 +33,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
     private string HealthbarTexture => TexturePrefix + (Settings.UseShadedTexture ? ShadedHealthbarTexture : FlatHealthbarTexture);
 
     private readonly ConcurrentDictionary<string, EntityTreatmentRule> _pathRuleCache = new();
+    private static readonly EntityTreatmentRule EmptyTreatmentRule = new();
     private bool _canTick = true;
     private IndividualEntityConfig _entityConfig = new IndividualEntityConfig(new SerializedIndividualEntityConfig());
     private Vector2 _oldPlayerCoord;
@@ -695,7 +696,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
     private EntityTreatmentRule FindRule(string path)
     {
-        return _pathRuleCache.GetOrAdd(path, p => _entityConfig.Rules.FirstOrDefault(x => x.Regex.IsMatch(p)).Rule ?? new EntityTreatmentRule());
+        return _pathRuleCache.GetOrAdd(path, p => _entityConfig.Rules.FirstOrDefault(x => x.Regex.IsMatch(p)).Rule ?? EmptyTreatmentRule);
     }
 
     private bool ShowInBossOverlay(HealthBar bar)
