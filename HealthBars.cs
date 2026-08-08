@@ -39,6 +39,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
     private HealthBar _playerBar;
     private CachedValue<bool> _ingameUiCheckVisible;
     private CachedValue<RectangleF> _windowRectangle;
+    private bool _settingsHooksAttached;
 
     public override void OnLoad()
     {
@@ -55,11 +56,55 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             IngameUi.FullscreenPanels.Any(x => x.IsVisibleLocal) ||
             IngameUi.LargePanels.Any(x => x.IsVisibleLocal), 250);
         LoadConfig();
-        Settings.PlayerZOffset.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
-        Settings.PlacePlayerBarRelativeToGroundLevel.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
-        Settings.EnableAbsolutePlayerBarPositioning.OnValueChanged += (_, _) => _oldPlayerCoord = Vector2.Zero;
-        Settings.ExportDefaultConfig.OnPressed += () => { File.WriteAllText(NewConfigCustomPath, GetEmbeddedConfigString()); };
+        Settings.PlayerZOffset.OnValueChanged += OnPlayerPositionSettingChanged;
+        Settings.PlacePlayerBarRelativeToGroundLevel.OnValueChanged += OnPlayerPositionSettingChanged;
+        Settings.EnableAbsolutePlayerBarPositioning.OnValueChanged += OnPlayerPositionSettingChanged;
+        Settings.Enable.OnValueChanged += OnEnableChanged;
+        Settings.ExportDefaultConfig.OnPressed += ExportDefaultConfig;
+        _settingsHooksAttached = true;
         return true;
+    }
+
+    private void OnPlayerPositionSettingChanged(object _, int __) => _oldPlayerCoord = Vector2.Zero;
+    private void OnPlayerPositionSettingChanged(object _, bool __) => _oldPlayerCoord = Vector2.Zero;
+
+    private void OnEnableChanged(object _, bool enabled)
+    {
+        if (!enabled) _canTick = false;
+    }
+
+    private void ExportDefaultConfig()
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(NewConfigCustomPath);
+            if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+            File.WriteAllText(NewConfigCustomPath, GetEmbeddedConfigString());
+        }
+        catch (Exception ex) { DebugWindow.LogError($"HealthBars config export failed: {ex}"); }
+    }
+
+    public override void OnPluginDestroyForHotReload()
+    {
+        DetachSettingsHooks();
+        base.OnPluginDestroyForHotReload();
+    }
+
+    public override void Dispose()
+    {
+        DetachSettingsHooks();
+        base.Dispose();
+    }
+
+    private void DetachSettingsHooks()
+    {
+        if (!_settingsHooksAttached) return;
+        Settings.PlayerZOffset.OnValueChanged -= OnPlayerPositionSettingChanged;
+        Settings.PlacePlayerBarRelativeToGroundLevel.OnValueChanged -= OnPlayerPositionSettingChanged;
+        Settings.EnableAbsolutePlayerBarPositioning.OnValueChanged -= OnPlayerPositionSettingChanged;
+        Settings.Enable.OnValueChanged -= OnEnableChanged;
+        Settings.ExportDefaultConfig.OnPressed -= ExportDefaultConfig;
+        _settingsHooksAttached = false;
     }
 
     private void LoadConfig()
@@ -135,10 +180,10 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
     private bool SkipHealthBar(HealthBar healthBar, bool checkDistance)
     {
-        if (checkDistance && healthBar.Distance > Settings.DrawDistanceLimit) return true;
+        if (checkDistance && (!float.IsFinite(healthBar.Distance) || healthBar.Distance > Settings.DrawDistanceLimit)) return true;
         if (healthBar.Life == null) return true;
         if (!healthBar.Entity.IsAlive) return true;
-        if (healthBar.HpPercent < 0.001f) return true;
+        if (!float.IsFinite(healthBar.HpPercent) || healthBar.HpPercent < 0.001f) return true;
 
         return false;
     }
@@ -168,7 +213,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
         worldCoords.Z += Settings.GlobalZOffset;
         var mobScreenCoords = Camera.WorldToScreen(worldCoords);
-        if (mobScreenCoords == Vector2.Zero) return;
+        if (mobScreenCoords == Vector2.Zero || !IsFinite(mobScreenCoords)) return;
         mobScreenCoords = Vector2.Lerp(mobScreenCoords, healthBar.LastPosition, healthBar.LastPosition == Vector2.Zero ? 0 : Math.Clamp(Settings.SmoothingFactor, 0, 1));
         healthBar.LastPosition = mobScreenCoords;
         var scaledWidth = healthBar.Settings.Width * WindowRelativeSize.X;
@@ -185,6 +230,11 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
     public override void Tick()
     {
+        if (!Settings.Enable)
+        {
+            _canTick = false;
+            return;
+        }
         _canTick = true;
 
         if (!Settings.IgnoreUiElementVisibility && _ingameUiCheckVisible?.Value == true ||
@@ -238,6 +288,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
         worldCoords.Z += Settings.PlayerZOffset;
         var result = Camera.WorldToScreen(worldCoords);
+        if (!IsFinite(result)) return;
 
         if (Settings.EnableAbsolutePlayerBarPositioning)
         {
@@ -273,7 +324,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
     public override void Render()
     {
-        if (!_canTick) return;
+        if (!Settings.Enable || !_canTick) return;
         var bossOverlayItems = new List<HealthBar>();
         foreach (var entity in GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Monster]
                      .Concat(GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Player]))
@@ -378,7 +429,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         var barSources = new List<(float Current, float Max, Color Color)>();
         if (bar.Settings.ShowWard)
         {
-            barSources.Add((bar.Life.Ward.Current, bar.Life.Ward.Max, bar.Settings.WardColor));
+            barSources.Add((bar.CurrentWard, bar.MaxWard, bar.Settings.WardColor));
         }
 
         if (bar.Settings.ShowLife)
@@ -513,9 +564,12 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
             .Replace("{currentes}", bar.Life.CurES.FormatHp())
             .Replace("{currentlife}", bar.Life.CurHP.FormatHp())
             .Replace("{currentmana}", bar.Life.CurMana.FormatHp())
-            .Replace("{currentward}", bar.Life.Ward.Current.FormatHp())
+            .Replace("{currentward}", bar.CurrentWard.FormatHp())
             ;
     }
+
+    private static bool IsFinite(Vector2 value)
+        => float.IsFinite(value.X) && float.IsFinite(value.Y);
 
     private static readonly HashSet<string> DangerousStages =
     [
