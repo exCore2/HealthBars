@@ -16,6 +16,11 @@ shield, mana, optional Ward, DPS, cast stages, and boss information.
 Ward remains an optional reflection boundary because the pinned binary has no
 stable compile-time `Life.Ward` contract; missing Ward is treated as zero.
 
+The Tick/Render paths enumerate monster and player buckets defensively, so a
+bucket that is not yet present during an area transition or menu simply produces
+no bars for that frame. Combined bars also skip the fill pass while all maxima
+are zero, and the EHP percentage reports zero instead of emitting NaN geometry.
+
 ## Status
 
 Build: **PASS**. Classification: **CURRENT_WITH_WARNINGS**; live entity and

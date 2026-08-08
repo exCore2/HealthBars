@@ -69,7 +69,7 @@ public class HealthBar
     public float HpPercent => Life.HPPercentage;
     public float EsPercent => Life.ESPercentage;
     public float ManaPercent => Life.MPPercentage;
-    public float EhpPercent => CurrentEhp / (float)MaxEhp;
+    public float EhpPercent => MaxEhp <= 0 ? 0 : CurrentEhp / (float)MaxEhp;
 
     // Ward is not exposed by every pinned ExileCore2/GameOffsets2 build. Resolve it
     // reflectively so the PoE2 plugin remains loadable and reports zero when the

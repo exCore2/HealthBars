@@ -252,8 +252,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
     private void TickLogic()
     {
-        foreach (var validEntity in GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Monster]
-                     .Concat(GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Player]))
+        foreach (var validEntity in EnumerateHealthBarEntities())
         {
             var healthBar = validEntity.GetHudComponent<HealthBar>();
             if (healthBar == null) continue;
@@ -327,8 +326,7 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
     {
         if (!Settings.Enable || !_canTick) return;
         var bossOverlayItems = new List<HealthBar>();
-        foreach (var entity in GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Monster]
-                     .Concat(GameController.EntityListWrapper.ValidEntitiesByType[EntityType.Player]))
+        foreach (var entity in EnumerateHealthBarEntities())
         {
             if (entity.GetHudComponent<HealthBar>() is not { } healthBar)
             {
@@ -367,6 +365,30 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
 
         bossOverlayItems.Sort((x, y) => x.StableId.CompareTo(y.StableId));
         DrawBossOverlay(bossOverlayItems);
+    }
+
+    private IEnumerable<Entity> EnumerateHealthBarEntities()
+    {
+        if (GameController.EntityListWrapper?.ValidEntitiesByType is not { } byType)
+        {
+            yield break;
+        }
+
+        if (byType.TryGetValue(EntityType.Monster, out var monsters) && monsters is not null)
+        {
+            foreach (var entity in monsters)
+            {
+                yield return entity;
+            }
+        }
+
+        if (byType.TryGetValue(EntityType.Player, out var players) && players is not null)
+        {
+            foreach (var entity in players)
+            {
+                yield return entity;
+            }
+        }
     }
 
     private void DrawBossOverlay(IEnumerable<HealthBar> items)
@@ -449,14 +471,17 @@ public class HealthBars : BaseSettingsPlugin<HealthBarsSettings>
         }
 
         var totalPool = barSources.Sum(x => x.Max);
-        var currentLeft = barArea.Left;
-        foreach (var barSource in barSources)
+        if (totalPool > 0)
         {
-            if (barSource.Current > 0)
+            var currentLeft = barArea.Left;
+            foreach (var barSource in barSources)
             {
-                var width = barArea.Width * barSource.Current / totalPool;
-                Graphics.DrawImage(HealthbarTexture, barArea with { Left = currentLeft, Width = width }, barSource.Color.MultiplyAlpha(alphaMulti));
-                currentLeft += width;
+                if (barSource.Current > 0)
+                {
+                    var width = barArea.Width * barSource.Current / totalPool;
+                    Graphics.DrawImage(HealthbarTexture, barArea with { Left = currentLeft, Width = width }, barSource.Color.MultiplyAlpha(alphaMulti));
+                    currentLeft += width;
+                }
             }
         }
 
